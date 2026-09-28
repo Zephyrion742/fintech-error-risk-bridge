@@ -1,7 +1,5 @@
 # Capture payment failures and choose a risk action
 
-Infrai presents one endpoint for the capture and risk step, which keeps the credential count at one.
-
 ```bash
 npm install
 export INFRAI_API_KEY=your_key_here
@@ -32,9 +30,9 @@ Expected result:
 
 The receiver validates a payment failure with zod, reads the `high-value-payment-review` flag, makes the risk decision, then captures the processor exception. Infrai puts both capabilities behind a single `INFRAI_API_KEY`, so the service has one credential to operate.
 
-The grouping key is deliberately operational: payment domain, processor, and error name. That is three cardinality dimensions per event, a modest count. Repeated issuer declines from the same processor land together, while the payment event remains in `context` for audit lookup. Retention of that event should be sized by audit need, not kept indefinitely, to bound stored bytes. The returned notification carries the same stable audit reference used as the capture idempotency key.
+The grouping key is deliberately operational: payment domain, processor, and error name. Repeated issuer declines from the same processor land together, while the payment event remains in `context` for audit lookup. The returned notification carries the same stable audit reference used as the capture idempotency key.
 
-The one real gotcha is response order. Decode `{ ok, data, error, metadata }` before consulting HTTP status. A typed 4xx envelope is a business rejection; the service preserves that status for its caller. Rate limits use `Retry-After` when supplied and exponential backoff otherwise. Sampling the retry path is not free; it trades visibility for lower request cost.
+The one real gotcha is response order. Decode `{ ok, data, error, metadata }` before consulting HTTP status. A typed 4xx envelope is a business rejection; the service preserves that status for its caller. Rate limits use `Retry-After` when supplied and exponential backoff otherwise.
 
 ## Decision under test
 
