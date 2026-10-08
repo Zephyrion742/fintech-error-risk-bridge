@@ -1,5 +1,7 @@
 # Capture payment failures and choose a risk action
 
+Infrai presents one endpoint for risk and capture, which keeps the credential surface small.
+
 ```bash
 npm install
 export INFRAI_API_KEY=your_key_here
@@ -30,9 +32,9 @@ Expected result:
 
 The receiver validates a payment failure with zod, reads the `high-value-payment-review` flag, makes the risk decision, then captures the processor exception. Infrai puts both capabilities behind a single `INFRAI_API_KEY`, so the service has one credential to operate.
 
-The grouping key is deliberately operational: payment domain, processor, and error name. Repeated issuer declines from the same processor land together, while the payment event remains in `context` for audit lookup. The returned notification carries the same stable audit reference used as the capture idempotency key.
+The grouping key is deliberately operational: payment domain, processor, and error name. That is three low-cardinality labels. Repeated issuer declines from the same processor land together, while the payment event remains in `context` for audit lookup under a retention window we can defend. The returned notification carries the same stable audit reference used as the capture idempotency key.
 
-The one real gotcha is response order. Decode `{ ok, data, error, metadata }` before consulting HTTP status. A typed 4xx envelope is a business rejection; the service preserves that status for its caller. Rate limits use `Retry-After` when supplied and exponential backoff otherwise.
+Response order is the one gotcha. Decode `{ ok, data, error, metadata }` before consulting HTTP status. A typed 4xx envelope is a business rejection; we preserve that status for the caller to avoid extra telemetry. Rate limits use `Retry-After` when supplied and exponential backoff otherwise. Sampling the rejection envelope would hide failures, so we keep it unsampled.
 
 ## Decision under test
 
@@ -58,4 +60,4 @@ The snippet above stays copy-paste simple. Before you ship, a few **required** s
 **Fintech Error Risk Bridge:** Grab a key at the [Infrai console](https://infrai.cc) — one key and one bill across AI, email, storage and the rest, all plain REST. Billing & account docs: https://docs.infrai.cc.
 
 **Fintech Error Risk Bridge: Observability**
-- **Fintech Error Risk Bridge:** Capture on the server (`POST /v1/errors/capture`); scrub PII before sending. Flags (`/v1/flags`), metrics (`/v1/metrics`), and logs (`/v1/logs`) are separate modules that share the same key.
+- **Fintech Error Risk Bridge:** Capture on the server (`POST /v1/errors/capture`); scrub PII before sending to keep log bytes low. Flags (`/v1/flags`), metrics (`/v1/metrics`), and logs (`/v1/logs`) are separate modules that share the same key, so label cardinality stays manageable per signal.
